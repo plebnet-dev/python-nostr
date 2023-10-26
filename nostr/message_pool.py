@@ -52,7 +52,7 @@ class MessagePool:
         return self.eose_notices.get()
 
     def get_auth(self):
-        return self.auth.get()
+        return self.auths.get()
 
     def has_events(self):
         return self.events.qsize() > 0

@@ -1,7 +1,7 @@
 import json
 import threading
 
-from .event import Event
+from .event import Event, AuthMessage
 from .filter import Filters
 from .message_pool import MessagePool
 from .message_type import ClientMessageType
@@ -52,10 +52,11 @@ class RelayManager:
         for relay in self.relays.values():
             relay.close()
 
-    def publish_message(self, message: str):
+    def publish_message(self, message: str, url: str = None):
         for relay in self.relays.values():
             if relay.policy.should_write:
-                relay.publish(message)
+                if url is None or url == relay.url:
+                    relay.publish(message)
 
     def publish_event(self, event: Event):
         """Verifies that the Event is publishable before submitting it to relays"""
@@ -67,3 +68,14 @@ class RelayManager:
                 f"Could not publish {event.id}: failed to verify signature {event.signature}"
             )
         self.publish_message(event.to_message())
+
+    def publish_auth(self, auth: AuthMessage):
+        """Verifies that the Event is publishable before submitting it to relays"""
+        if auth.signature is None:
+            raise RelayException(f"Could not publish {auth.id}: must be signed")
+
+        if not auth.verify():
+            raise RelayException(
+                f"Could not publish {auth.id}: failed to verify signature {auth.signature}"
+            )
+        self.publish_message(auth.to_message(), auth.relay_url)        
