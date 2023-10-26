@@ -2,7 +2,7 @@ import json
 import time
 from queue import Queue
 from threading import Lock
-from websocket import WebSocketApp
+from websocket import WebSocketApp, WebSocketConnectionClosedException
 from .event import Event
 from .filter import Filters
 from .message_pool import MessagePool
@@ -90,7 +90,10 @@ class Relay:
             if self.connected:
                 message = self.queue.get()
                 self.num_sent_events += 1
-                self.ws.send(message)
+                try:
+                    self.ws.send(message)
+                except WebSocketConnectionClosedException as wscce:
+                    self._on_error(None, wscce)
             else:
                 time.sleep(0.1)
 
