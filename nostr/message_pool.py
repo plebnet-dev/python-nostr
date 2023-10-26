@@ -24,11 +24,18 @@ class EndOfStoredEventsMessage:
         self.url = url
 
 
+class AuthMessage:
+    def __init__(self, challenge: str, url: str) -> None:
+        self.challenge = challenge
+        self.url = url
+
+
 class MessagePool:
     def __init__(self) -> None:
         self.events: Queue[EventMessage] = Queue()
         self.notices: Queue[NoticeMessage] = Queue()
         self.eose_notices: Queue[EndOfStoredEventsMessage] = Queue()
+        self.auths: Queue[AuthMessage] = Queue()
         self._unique_events: set = set()
         self.lock: Lock = Lock()
 
@@ -44,6 +51,9 @@ class MessagePool:
     def get_eose_notice(self):
         return self.eose_notices.get()
 
+    def get_auth(self):
+        return self.auth.get()
+
     def has_events(self):
         return self.events.qsize() > 0
 
@@ -52,6 +62,9 @@ class MessagePool:
 
     def has_eose_notices(self):
         return self.eose_notices.qsize() > 0
+
+    def has_auths(self):
+        return self.auths.qsize() > 0
 
     def _process_message(self, message: str, url: str):
         message_json = json.loads(message)
@@ -75,3 +88,5 @@ class MessagePool:
             self.notices.put(NoticeMessage(message_json[1], url))
         elif message_type == RelayMessageType.END_OF_STORED_EVENTS:
             self.eose_notices.put(EndOfStoredEventsMessage(message_json[1], url))
+        elif message_type == RelayMessageType.AUTH:
+            self.auths.put(AuthMessage(message_json[1], url))
