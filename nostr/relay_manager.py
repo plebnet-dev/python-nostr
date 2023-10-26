@@ -52,13 +52,12 @@ class RelayManager:
         for relay in self.relays.values():
             relay.close()
 
-    def publish_message(self, message: str, url:str=None):
+    def publish_message(self, message: str):
         for relay in self.relays.values():
             if relay.policy.should_write:
-                if url is None or relay.url == url:
-                    relay.publish(message)
+                relay.publish(message)
 
-    def verify_event(self, event: Event):
+    def publish_event(self, event: Event):
         """Verifies that the Event is publishable before submitting it to relays"""
         if event.signature is None:
             raise RelayException(f"Could not publish {event.id}: must be signed")
@@ -67,12 +66,4 @@ class RelayManager:
             raise RelayException(
                 f"Could not publish {event.id}: failed to verify signature {event.signature}"
             )
-
-    def publish_event(self, event: Event):
-        self.verify_event(event)
         self.publish_message(event.to_message())
-
-    def publish_auth(self, event: Event, url: str):
-        self.verify_event(event)
-        self.publish_message(event.to_message(), url)
-

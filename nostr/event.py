@@ -16,6 +16,7 @@ class EventKind(IntEnum):
     CONTACTS = 3
     ENCRYPTED_DIRECT_MESSAGE = 4
     DELETE = 5
+    CLIENT_AUTHENTICATION = 22242
 
 
 @dataclass
@@ -67,6 +68,14 @@ class Event:
     def add_event_ref(self, event_id: str):
         """Adds a reference to an event_id as an 'e' tag"""
         self.tags.append(["e", event_id])
+
+    def add_relay_ref(self, relay_url: str):
+        """Adds a reference to a relay_url as a 'relay' tag"""
+        self.tags.append(["relay", relay_url])
+    
+    def add_challenge_ref(self, challenge: str):
+        """Adds a reference to a challenge as a 'challenge' tag"""
+        self.tags.append(["challenge", challenge])
 
     def verify(self) -> bool:
         pub_key = PublicKey(
@@ -124,3 +133,41 @@ class EncryptedDirectMessage(Event):
                 "EncryptedDirectMessage `id` is undefined until its message is encrypted and stored in the `content` field"
             )
         return super().id
+
+
+@dataclass
+class AuthMessage(Event):
+    relay_url: str = None
+    challenge: str = None
+
+    def __post_init__(self):
+        if self.relay_url is None:
+            raise Exception("Must specify a relay url.")
+        
+        if self.challenge is None:
+            raise Exception("Must specify a challenge.")
+
+        self.kind = EventKind.CLIENT_AUTHENTICATION
+        super().__post_init__()
+
+        # Must specify the relay url in a 'relay' tag
+        self.add_relay_ref(self.relay_url)
+
+        # Must specify the challenge in a 'challenge' tag
+        self.add_challenge_ref(self.challenge)
+
+    def to_message(self) -> str:
+        return json.dumps(
+            [
+                ClientMessageType.AUTH,
+                {
+                    "id": self.id,
+                    "pubkey": self.public_key,
+                    "created_at": self.created_at,
+                    "kind": self.kind,
+                    "tags": self.tags,
+                    "content": self.content,
+                    "sig": self.signature,
+                },
+            ]
+        )
