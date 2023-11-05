@@ -68,8 +68,10 @@ class Relay:
             )
 
     def close(self):
-        self.ws.close()
         self.shutdown = True
+        self.ws.close()
+        with self.lock:
+            self.subscriptions = {}
 
     def check_reconnect(self):
         try:
