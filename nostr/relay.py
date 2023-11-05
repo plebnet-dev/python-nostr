@@ -47,6 +47,7 @@ class Relay:
         self.queue = Queue()
 
     def connect(self, ssl_options: dict = None, proxy: dict = None):
+        if self.shutdown: return
         self.ws = WebSocketApp(
             self.url,
             on_open=self._on_open,
@@ -98,10 +99,12 @@ class Relay:
                     message = self.queue.get(timeout=1)
                     self.ws.send(message)
                     self.num_sent_events += 1
-                except:
+                except Exception as e:
                     if shutdown():
                         break
             else:
+                if shutdown():
+                    break
                 time.sleep(0.1)
 
     def add_subscription(self, id, filters: Filters):
